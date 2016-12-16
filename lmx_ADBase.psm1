@@ -20,6 +20,11 @@ advised of the possibility of such damages.
 =============================================================================
 #>
 
+New-Variable -Name DCLO_AvoidSelf -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::AvoidSelf) -Option ReadOnly
+New-Variable -Name DCLO_ForceRediscovery -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::ForceRediscovery) -Option ReadOnly
+New-Variable -Name DCLO_KdcRequired -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::KdcRequired) -Option ReadOnly
+New-Variable -Name DCLO_TimeServerRequired -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::TimeServerRequired) -Option ReadOnly
+New-Variable -Name DCLO_WriteableRequired -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::WriteableRequired) -Option ReadOnly
 
 function Get-ADForest{
     param(
@@ -59,13 +64,36 @@ function Get-ADDomain{
     return [System.DirectoryServices.ActiveDirectory.Domain]::GetDomain($DomainContext)
 }
 
-#function Get-ADDomainController{
-#    param(
-#        [String]$Name,
-#        [PsCredential]$Credential
-#    )
-#
-#}
+function Get-ADDomainController{
+    param(
+        [String]$Domain,
+        [PsCredential]$Credential,
+        [System.DirectoryServices.ActiveDirectory.LocatorOptions]$LocatorOption,
+        [Switch]$All
+    )
+    if(!$Domain){
+        $Domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().Name
+    }
+    if($Credential){
+        $CredUser = $Credential.UserName.ToString()
+        $CredPwd = $Credential.GetNetworkCredential().Password.ToString()
+        $DomainContext = New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext("Domain",$Domain,$CredUser,$CredPwd)
+    }
+    else{
+        $DomainContext = New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext("Domain",$Domain)
+    }
+    if($All){
+        return [System.DirectoryServices.ActiveDirectory.DomainController]::FindAll($DomainContext)
+    }
+    else{
+        if(!$LocatorOption){
+            return [System.DirectoryServices.ActiveDirectory.DomainController]::FindOne($DomainContext)
+        }
+        else{
+            return [System.DirectoryServices.ActiveDirectory.DomainController]::FindOne($DomainContext,$LocatorOption)
+        }
+    }
+}
 
 #function Get-ADSite{}
 #
@@ -80,3 +108,6 @@ function Get-ADDomain{
 #function Get-ADComputer{}
 #
 #function Search-AD{}
+
+Export-ModuleMember -Function 'Get-ADForest','Get-ADDomain','Get-ADDomainController'
+Export-ModuleMember -Variable 'DCLO_AvoidSelf','DCLO_ForceRediscovery','DCLO_KdcRequired','DCLO_TimeServerRequired','DCLO_WriteableRequired'
