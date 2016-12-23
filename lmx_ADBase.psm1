@@ -115,9 +115,64 @@ function Get-ADDomainController{
     }
 }
 
+function Get-ADObject {
+    [cmdletbinding(DefaultParameterSetName="Domain")]
+    param(
+        [Parameter(ParameterSetName="Domain")][String]$DomainName,
+        [Parameter(ParameterSetName="SearchBase")][String]$SearchBase,
+        [Parameter(Mandatory=$true)][ValidateNotNull()][String]$LDAPFilter,
+        [ValidateSet("BASE","ONELEVEL","SUBTREE")][String]$SearchScope = "SUBTREE",
+        [ValidateSet("GC","LDAP")][String]$Mode="LDAP",
+        [ValidateNotNull()][System.Int32]$PageSize = 1000,
+        [String[]]$PropertyList,
+        [pscredential]$Credential,
+        [Switch]$GlobalCatalog,
+        [Switch]$FindOne,
+        [Switch]$GetObjects
+    )
+
+    switch ($PSCmdlet.ParameterSetName)
+    {
+        'Domain' {
+            if($DomainName){
+                $EntryPoint = "$($Mode)://$DomainName/RootDSE"
+            }
+            else{
+                $EntryPoint = "$($Mode)://RootDSE"
+            }
+            if($Credential){
+                $SearchBase = (New-Object System.DirectoryServices.DirectoryEntry($EntryPoint,$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)).defaultNamingContext
+                $SearchBase = "$($Mode)://$SearchBase"
+                $StartDN = New-Object System.DirectoryServices.DirectoryEntry($SearchBase,$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)
+            }
+            else{
+                $SearchBase = (New-Object System.DirectoryServices.DirectoryEntry($EntryPoint)).defaultNamingContext
+                $SearchBase = "$($Mode)://$SearchBase"
+                $StartDN = New-Object System.DirectoryServices.DirectoryEntry($SearchBase)
+            }
+        }
+        'SearchBase' {
+            $SearchBase = "$($Mode)://$SearchBase"
+            if($Credential){
+                $StartDN = New-Object System.DirectoryServices.DirectoryEntry($SearchBase,$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)
+            }
+            else{
+                $StartDN = New-Object System.DirectoryServices.DirectoryEntry($SearchBase)
+            }
+        }
+    }
+    $ADSearcher = New-Object System.DirectoryServices.DirectorySearcher
+    $ADSearcher.SearchRoot = $StartDN
+    $ADSearcher.PageSize = $PageSize
+    $ADSearcher.Filter = $LDAPFilter
+    $ADSearcher.SearchScope = $SearchScope
+    if ($PropertyList){foreach ($ADProperty in $PropertyList){[Void]$ADSearcher.PropertiesToLoad.Add($ADProperty)}}
+    if ($FindOne) {$ADResults = $ADSearcher.FindOne()}
+    else {$ADResults = $ADSearcher.FindAll()}
+    return $ADResults
+}
+
 #function Get-ADSite{}
-#
-#function Get-ADObject{}
 #
 #function Get-ADUser{}
 #
@@ -129,5 +184,5 @@ function Get-ADDomainController{
 #
 #function Search-AD{}
 
-Export-ModuleMember -Function 'Get-ADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController'
+Export-ModuleMember -Function 'Get-ADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController','Get-ADObject'
 Export-ModuleMember -Variable 'DCLO_AvoidSelf','DCLO_ForceRediscovery','DCLO_KdcRequired','DCLO_TimeServerRequired','DCLO_WriteableRequired'
