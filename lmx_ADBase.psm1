@@ -26,6 +26,26 @@ New-Variable -Name DCLO_KdcRequired -Value ([System.DirectoryServices.ActiveDire
 New-Variable -Name DCLO_TimeServerRequired -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::TimeServerRequired) -Option ReadOnly
 New-Variable -Name DCLO_WriteableRequired -Value ([System.DirectoryServices.ActiveDirectory.LocatorOptions]::WriteableRequired) -Option ReadOnly
 
+function Get-ADRootDSE{
+    param(
+        [String]$DomainName,
+        [pscredential]$Credential
+    )
+    if($DomainName){
+        $EntryPoint = "LDAP://$DomainName/RootDSE"
+    }
+    else{
+        $EntryPoint = "LDAP://RootDSE"
+    }
+    if($Credential){
+        $rootDSE = New-Object System.DirectoryServices.DirectoryEntry($EntryPoint,$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)
+    }
+    else{
+        $rootDSE = New-Object System.DirectoryServices.DirectoryEntry($EntryPoint)
+    }
+    return $rootDSE
+}
+
 function Get-ADForest{
     param(
         [String]$Name,
@@ -109,5 +129,5 @@ function Get-ADDomainController{
 #
 #function Search-AD{}
 
-Export-ModuleMember -Function 'Get-ADForest','Get-ADDomain','Get-ADDomainController'
+Export-ModuleMember -Function 'GetADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController'
 Export-ModuleMember -Variable 'DCLO_AvoidSelf','DCLO_ForceRediscovery','DCLO_KdcRequired','DCLO_TimeServerRequired','DCLO_WriteableRequired'
