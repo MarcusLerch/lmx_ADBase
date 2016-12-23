@@ -129,5 +129,5 @@ function Get-ADDomainController{
 #
 #function Search-AD{}
 
-Export-ModuleMember -Function 'GetADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController'
+Export-ModuleMember -Function 'Get-ADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController'
 Export-ModuleMember -Variable 'DCLO_AvoidSelf','DCLO_ForceRediscovery','DCLO_KdcRequired','DCLO_TimeServerRequired','DCLO_WriteableRequired'
