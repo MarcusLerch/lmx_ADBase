@@ -128,7 +128,7 @@ function Get-ADObject {
         [pscredential]$Credential,
         [Switch]$GlobalCatalog,
         [Switch]$FindOne,
-        [Switch]$GetObjects
+        [Switch]$GetObject
     )
 
     switch ($PSCmdlet.ParameterSetName)
@@ -169,7 +169,22 @@ function Get-ADObject {
     if ($PropertyList){foreach ($ADProperty in $PropertyList){[Void]$ADSearcher.PropertiesToLoad.Add($ADProperty)}}
     if ($FindOne) {$ADResults = $ADSearcher.FindOne()}
     else {$ADResults = $ADSearcher.FindAll()}
-    return $ADResults
+    if($GetObject){
+        $SearchResult = @()
+        foreach ($ADResult in $ADResults){
+            if($Credential){
+                $ADObject = New-Object System.DirectoryServices.DirectoryEntry("$($ADResult.Path)",$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)
+            }
+            else{
+                $ADObject = New-Object System.DirectoryServices.DirectoryEntry("$($ADResult.Path)")
+            }
+            $SearchResult += $ADObject
+        }
+        return $SearchResult
+    }
+    else{
+        return $ADResults
+    }
 }
 
 #function Get-ADSite{}
