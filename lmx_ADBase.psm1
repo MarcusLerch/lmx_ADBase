@@ -128,7 +128,7 @@ function Get-ADObject {
         [pscredential]$Credential,
         [Switch]$GlobalCatalog,
         [Switch]$FindOne,
-        [Switch]$GetObject
+        [Switch]$ExpandObject
     )
 
     switch ($PSCmdlet.ParameterSetName)
@@ -169,14 +169,12 @@ function Get-ADObject {
     if ($PropertyList){foreach ($ADProperty in $PropertyList){[Void]$ADSearcher.PropertiesToLoad.Add($ADProperty)}}
     if ($FindOne) {$ADResults = $ADSearcher.FindOne()}
     else {$ADResults = $ADSearcher.FindAll()}
-    if($GetObject){
+    if($ExpandObject){
         $SearchResult = @()
         foreach ($ADResult in $ADResults){
-            if($Credential){
-                $ADObject = New-Object System.DirectoryServices.DirectoryEntry("$($ADResult.Path)",$Credential.GetNetworkCredential().UserName,$Credential.GetNetworkCredential().Password)
-            }
-            else{
-                $ADObject = New-Object System.DirectoryServices.DirectoryEntry("$($ADResult.Path)")
+            $ADObject = New-Object psobject
+            foreach ($property in $ADResult.Properties.Keys){
+                Add-Member -InputObject $ADObject -MemberType NoteProperty -Name $property -Value $ADResult.Properties.Item($property).item(0) -ErrorAction SilentlyContinue
             }
             $SearchResult += $ADObject
         }
