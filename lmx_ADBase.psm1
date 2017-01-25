@@ -172,10 +172,10 @@ function Get-ADObject {
     if($ExpandObject){
         $SearchResult = @()
         foreach ($ADResult in $ADResults){
-            $ADObject = New-Object psobject
-            foreach ($property in $ADResult.Properties.Keys){
-                Add-Member -InputObject $ADObject -MemberType NoteProperty -Name $property -Value $ADResult.Properties.Item($property).item(0) -ErrorAction SilentlyContinue
-            }
+            $ADObject = $ADResult.GetDirectoryEntry() # New-Object psobject
+#            foreach ($property in $ADResult.Properties.Keys){
+#                Add-Member -InputObject $ADObject -MemberType NoteProperty -Name $property -Value $ADResult.Properties.Item($property).item(0) -ErrorAction SilentlyContinue
+#            }
             $SearchResult += $ADObject
         }
         return $SearchResult
@@ -185,10 +185,41 @@ function Get-ADObject {
     }
 }
 
-#function Get-ADSite{}
-#
-#function Get-ADUser{}
-#
+function Get-ADSite{
+param(
+        [String]$DomainName,
+        [String]$Name="*",
+        [pscredential]$Credential
+    )
+    $configurationNamingContext = (Get-ADRootDSE -DomainName $DomainName -Credential $Credential).configurationNamingContext
+
+    $Sites = Get-ADObject -Credential $Credential -SearchBase $configurationNamingContext -LDAPFilter "(&(objectclass=site)(name=$Name))" -ExpandObject
+
+    return $Sites
+}
+
+function Get-ADUser{
+        [cmdletbinding(DefaultParameterSetName="Name")]
+    param(
+        [String]$DomainName,
+        [Parameter(ParameterSetName="Name",Position=0)][String]$Name="*",
+        [Parameter(ParameterSetName="SamAccount",Position=0)][String]$SamAccountName="*",
+        [String[]]$PropertyList= @('DistinguishedName','Enabled','GivenName','Name','ObjectClass','ObjectGUID','SamAccountName','objectSID','sn','userprincipalname'),
+        [pscredential]$Credential
+    )
+    $defaultNamingContext = (Get-ADRootDSE -DomainName $DomainName -Credential $Credential).defaultNamingContext
+
+    switch ($PSCmdlet.ParameterSetName)
+    {
+        'Name' {$LDAPFilter = "(&(objectclass=user)(ANR=$Name))"}
+        'SamAccount' {$LDAPFilter = "(&(objectclass=user)(sAMAccountNAme=$SamAccountName))"}
+    }
+
+    $Users = Get-ADObject -Credential $Credential -SearchBase $defaultNamingContext -LDAPFilter $LDAPFilter -PropertyList $PropertyList #-ExpandObject
+
+    return $Users
+}
+
 #function Get-ADGroup{}
 #
 #function Get-ADGroupMember{}
@@ -197,5 +228,5 @@ function Get-ADObject {
 #
 #function Search-AD{}
 
-Export-ModuleMember -Function 'Get-ADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController','Get-ADObject'
+Export-ModuleMember -Function 'Get-ADRootDSE','Get-ADForest','Get-ADDomain','Get-ADDomainController','Get-ADObject','Get-ADSite','Get-ADUser'
 Export-ModuleMember -Variable 'DCLO_AvoidSelf','DCLO_ForceRediscovery','DCLO_KdcRequired','DCLO_TimeServerRequired','DCLO_WriteableRequired'
